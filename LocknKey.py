@@ -16,6 +16,7 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SECRET_KEY'] = 'thisisasecretkey'
+app.config['SQLALCHEMY_BINDS'] = {'stored_passwords': 'sqlite:///stored_password.db'}
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager()
@@ -109,7 +110,9 @@ def login():
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    stored_passwords = StoredPassword.query.filter_by(user_id=current_user.id).all()
+    return render_template('dashboard.html', stored_passwords=stored_passwords)
+
 
 
 @app.route('/logout', methods=['GET', 'POST'])
@@ -133,6 +136,78 @@ def register():
     return render_template('register.html', form=form)
 
 ########################## LOG-IN AND REGISTER FOR PASSWORD MANAGER ##########################
+
+########################## PASSWORD MANAGER ##########################
+def create_stored_passwords_db():
+    with app.app_context():
+        db.create_all()
+
+class StoredPassword(db.Model):
+    __tablename__ = 'stored_password'
+    __table_args__ = {'extend_existing': True}
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    website = db.Column(db.String(100))
+    username = db.Column(db.String(100))
+    password = db.Column(db.String(100))
+
+
+
+class AddPasswordForm(FlaskForm):
+    website = StringField('Website', validators=[InputRequired(), Length(max=100)])
+    username = StringField('Username', validators=[InputRequired(), Length(max=100)])
+    password = StringField('Password', validators=[InputRequired(), Length(max=200)])
+    submit = SubmitField('Add Password')
+
+
+class EditPasswordForm(FlaskForm):
+    website = StringField('Website', validators=[InputRequired(), Length(max=100)])
+    username = StringField('Username', validators=[InputRequired(), Length(max=100)])
+    password = StringField('Password', validators=[InputRequired(), Length(max=200)])
+    submit = SubmitField('Save Changes')
+
+
+@app.route('/add_password', methods=['GET', 'POST'])
+@login_required
+def add_password():
+    form = AddPasswordForm()
+    if form.validate_on_submit():
+        new_password = StoredPassword(user_id=current_user.id,
+                                      website=form.website.data,
+                                      username=form.username.data,
+                                      password=form.password.data)
+        db.session.add(new_password)
+        db.session.commit()
+        return redirect(url_for('dashboard'))
+    return render_template('add_password.html', form=form)
+
+
+@app.route('/edit_password/<int:password_id>', methods=['GET', 'POST'])
+@login_required
+def edit_password(password_id):
+    stored_password = StoredPassword.query.get_or_404(password_id)
+    form = EditPasswordForm()
+    if form.validate_on_submit():
+        stored_password.website = form.website.data
+        stored_password.username = form.username.data
+        stored_password.password = form.password.data
+        db.session.commit()
+        return redirect(url_for('dashboard'))
+    elif request.method == 'GET':
+        form.website.data = stored_password.website
+        form.username.data = stored_password.username
+        form.password.data = stored_password.password
+    return render_template('edit_password.html', form=form)
+
+
+@app.route('/delete_password/<int:password_id>', methods=['POST'])
+@login_required
+def delete_password(password_id):
+    stored_password = StoredPassword.query.get_or_404(password_id)
+    db.session.delete(stored_password)
+    db.session.commit()
+    return redirect(url_for('dashboard'))
+########################## PASSWORD MANAGER ##########################
 
 if __name__ == '__main__':
     app.run(debug=True)
