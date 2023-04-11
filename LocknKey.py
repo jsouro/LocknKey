@@ -2,7 +2,6 @@ from flask import Flask, render_template, redirect, request, url_for, flash
 import random
 import string
 import hashlib
-import sqlite3
 import os
 import zxcvbn
 from flask_sqlalchemy import SQLAlchemy
@@ -11,17 +10,30 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
 from flask_bcrypt import Bcrypt
+from cryptography.fernet import Fernet
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://jacob:jacob@localhost:3306/database.db'
 app.config['SECRET_KEY'] = 'thisisasecretkey'
-app.config['SQLALCHEMY_BINDS'] = {'stored_passwords': 'sqlite:///stored_password.db'}
+app.config['SQLALCHEMY_BINDS'] = {'stored_passwords': 'mysql+mysqlconnector://jacob:jacob@localhost:3306/stored_passwords.db'}
+app.config['ENCRYPTION_KEY'] = 'ikfkZzSKk0qh3ypyF2ByhEd8RvZa6oDRynkAuCZuelQ='
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+def encrypt_text(plain_text, encryption_key):
+    cipher_suite = Fernet(encryption_key)
+    cipher_text = cipher_suite.encrypt(plain_text.encode())
+    return cipher_text
+
+
+def decrypt_text(cipher_text, encryption_key):
+    cipher_suite = Fernet(encryption_key)
+    plain_text = cipher_suite.decrypt(cipher_text).decode()
+    return plain_text
 
 @app.route('/')
 def home():
@@ -151,6 +163,21 @@ class StoredPassword(db.Model):
     username = db.Column(db.String(100))
     password = db.Column(db.String(100))
 
+    def __init__(self, user_id, website, username, password):
+        self.user_id = user_id
+        self.website = encrypt_text(website, app.config['ENCRYPTION_KEY'])
+        self.username = encrypt_text(username, app.config['ENCRYPTION_KEY'])
+        self.password = encrypt_text(password, app.config['ENCRYPTION_KEY'])
+
+    def get_website(self):
+        return decrypt_text(self.website, app.config['ENCRYPTION_KEY'])
+
+    def get_username(self):
+        return decrypt_text(self.username, app.config['ENCRYPTION_KEY'])
+
+    def get_password(self):
+        return decrypt_text(self.password, app.config['ENCRYPTION_KEY'])
+
 
 
 class AddPasswordForm(FlaskForm):
@@ -208,6 +235,8 @@ def delete_password(password_id):
     db.session.commit()
     return redirect(url_for('dashboard'))
 ########################## PASSWORD MANAGER ##########################
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
