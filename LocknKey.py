@@ -14,9 +14,9 @@ from cryptography.fernet import Fernet
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://jacob:jacob@localhost:3306/database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://jacob:jacob@localhost:3306/database'
 app.config['SECRET_KEY'] = 'thisisasecretkey'
-app.config['SQLALCHEMY_BINDS'] = {'stored_passwords': 'mysql+mysqlconnector://jacob:jacob@localhost:3306/stored_passwords.db'}
+app.config['SQLALCHEMY_BINDS'] = {'stored_passwords': 'mysql+mysqlconnector://jacob:jacob@localhost:3306/stored_passwords}
 app.config['ENCRYPTION_KEY'] = 'ikfkZzSKk0qh3ypyF2ByhEd8RvZa6oDRynkAuCZuelQ='
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
