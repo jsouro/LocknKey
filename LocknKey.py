@@ -5,6 +5,7 @@ import hashlib
 import os
 import zxcvbn
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -14,10 +15,10 @@ from cryptography.fernet import Fernet
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://jacob:jacob@localhost:3306/database'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:jacob@localhost:3306/database'
 app.config['SECRET_KEY'] = 'thisisasecretkey'
-app.config['SQLALCHEMY_BINDS'] = {'stored_passwords': 'mysql+mysqlconnector://jacob:jacob@localhost:3306/stored_passwords}
 app.config['ENCRYPTION_KEY'] = 'ikfkZzSKk0qh3ypyF2ByhEd8RvZa6oDRynkAuCZuelQ='
+
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager()
@@ -74,9 +75,10 @@ def load_user(user_id):
 
 
 class User(db.Model, UserMixin):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # Add autoincrement=True
     username = db.Column(db.String(20), nullable=False, unique=True)
     password = db.Column(db.String(80), nullable=False)
+
 
 
 class RegisterForm(FlaskForm):
@@ -137,8 +139,9 @@ def logout():
 @ app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
-
+    
     if form.validate_on_submit():
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
         hashed_password = bcrypt.generate_password_hash(form.password.data)
         new_user = User(username=form.username.data, password=hashed_password)
         db.session.add(new_user)
@@ -238,8 +241,11 @@ def delete_password(password_id):
 
 
 
+
+
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
