@@ -30,7 +30,7 @@ login_manager.login_view = 'login'
 
 # Define functions to encrypt and decrypt text using Fernet
 def encrypt_text(plain_text, encryption_key):
-    cipher_suite = Fernet(encryption_key)
+    cipher_suite = Fernet(encryption_key) #Fernet is symmetric encryption
     cipher_text = cipher_suite.encrypt(plain_text.encode())
     return cipher_text
 
@@ -220,7 +220,7 @@ class StoredPassword(db.Model):
         return decrypt_text(self.password, app.config['ENCRYPTION_KEY'])
 
 
-# Define forms for adding and editing passwords
+# Define forms for adding
 class AddPasswordForm(FlaskForm):
     website = StringField('Website', validators=[InputRequired(), Length(max=100)])
     username = StringField('Username', validators=[InputRequired(), Length(max=100)])
@@ -228,11 +228,7 @@ class AddPasswordForm(FlaskForm):
     submit = SubmitField('Add Password')
 
 
-class EditPasswordForm(FlaskForm):
-    website = StringField('Website', validators=[InputRequired(), Length(max=100)])
-    username = StringField('Username', validators=[InputRequired(), Length(max=100)])
-    password = StringField('Password', validators=[InputRequired(), Length(max=200)])
-    submit = SubmitField('Save Changes')
+
 
 # Define routes for adding, editing, and deleting passwords
 @app.route('/add_password', methods=['GET', 'POST'])
@@ -250,22 +246,7 @@ def add_password():
     return render_template('add_password.html', form=form)
 
 
-@app.route('/edit_password/<int:password_id>', methods=['GET', 'POST'])
-@login_required
-def edit_password(password_id):
-    stored_password = StoredPassword.query.get_or_404(password_id)
-    form = EditPasswordForm()
-    if form.validate_on_submit():
-        stored_password.website = form.website.data
-        stored_password.username = form.username.data
-        stored_password.password = form.password.data
-        db.session.commit()
-        return redirect(url_for('dashboard'))
-    elif request.method == 'GET':
-        form.website.data = stored_password.website
-        form.username.data = stored_password.username
-        form.password.data = stored_password.password
-    return render_template('edit_password.html', form=form)
+
 
 
 @app.route('/delete_password/<int:password_id>', methods=['POST'])
