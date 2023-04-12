@@ -1,3 +1,4 @@
+# Import necessary libraries and modules
 from flask import Flask, render_template, redirect, request, url_for, flash
 import random
 import string
@@ -13,18 +14,21 @@ from wtforms.validators import InputRequired, Length, ValidationError, EqualTo
 from flask_bcrypt import Bcrypt
 from cryptography.fernet import Fernet
 
+# Create Flask app and configure it
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:jacob@localhost:3306/database'
 app.config['SECRET_KEY'] = 'thisisasecretkey'
 app.config['ENCRYPTION_KEY'] = 'ikfkZzSKk0qh3ypyF2ByhEd8RvZa6oDRynkAuCZuelQ='
 
+# Initialize database, bcrypt for password hashing, and login manager
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# Define functions to encrypt and decrypt text using Fernet
 def encrypt_text(plain_text, encryption_key):
     cipher_suite = Fernet(encryption_key)
     cipher_text = cipher_suite.encrypt(plain_text.encode())
@@ -32,12 +36,12 @@ def encrypt_text(plain_text, encryption_key):
 
 
 def decrypt_text(cipher_text, key):
-    cipher_text = bytes(cipher_text, 'utf-8')  # Add this line to convert cipher_text to bytes
+    cipher_text = bytes(cipher_text, 'utf-8')  
     cipher_suite = Fernet(key) #Fernet is a symmetric encryption method
     plain_text = cipher_suite.decrypt(cipher_text).decode()
     return plain_text
 
-
+# Define routes for home, generate_password, and test_password
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -71,6 +75,7 @@ def test_password():
 
 ########################## LOG-IN AND REGISTER FOR PASSWORD MANAGER ##########################
 
+# Login and register section for the password manager
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -95,6 +100,7 @@ class StrongPassword:
         if score < 3:
             raise ValidationError(self.message)
 
+# Define registration and login forms
 class RegisterForm(FlaskForm):
     username = StringField(validators=[
                            InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
@@ -130,6 +136,7 @@ class LoginForm(FlaskForm):
 
     submit = SubmitField('Login')
 
+# Define routes for login, dashboard, and logout
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -167,7 +174,7 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-
+# Define route for registration
 @ app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
@@ -185,10 +192,9 @@ def register():
 ########################## LOG-IN AND REGISTER FOR PASSWORD MANAGER ##########################
 
 ########################## PASSWORD MANAGER ##########################
-def create_stored_passwords_db():
-    with app.app_context():
-        db.create_all()
 
+
+# Password manager section
 class StoredPassword(db.Model):
     __tablename__ = 'stored_password'
     __table_args__ = {'extend_existing': True}
@@ -214,7 +220,7 @@ class StoredPassword(db.Model):
         return decrypt_text(self.password, app.config['ENCRYPTION_KEY'])
 
 
-
+# Define forms for adding and editing passwords
 class AddPasswordForm(FlaskForm):
     website = StringField('Website', validators=[InputRequired(), Length(max=100)])
     username = StringField('Username', validators=[InputRequired(), Length(max=100)])
@@ -228,7 +234,7 @@ class EditPasswordForm(FlaskForm):
     password = StringField('Password', validators=[InputRequired(), Length(max=200)])
     submit = SubmitField('Save Changes')
 
-
+# Define routes for adding, editing, and deleting passwords
 @app.route('/add_password', methods=['GET', 'POST'])
 @login_required
 def add_password():
@@ -274,7 +280,7 @@ def delete_password(password_id):
 
 
 
-
+# Main entry point of the application
 if __name__ == '__main__':
     app.run(debug=True)
 
