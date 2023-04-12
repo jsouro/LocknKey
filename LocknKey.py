@@ -9,7 +9,7 @@ from sqlalchemy import text
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import InputRequired, Length, ValidationError
+from wtforms.validators import InputRequired, Length, ValidationError, EqualTo
 from flask_bcrypt import Bcrypt
 from cryptography.fernet import Fernet
 
@@ -31,10 +31,12 @@ def encrypt_text(plain_text, encryption_key):
     return cipher_text
 
 
-def decrypt_text(cipher_text, encryption_key):
-    cipher_suite = Fernet(encryption_key)
+def decrypt_text(cipher_text, key):
+    cipher_text = bytes(cipher_text, 'utf-8')  # Add this line to convert cipher_text to bytes
+    cipher_suite = Fernet(key) #Fernet is a symmetric encryption method
     plain_text = cipher_suite.decrypt(cipher_text).decode()
     return plain_text
+
 
 @app.route('/')
 def home():
@@ -79,7 +81,19 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(20), nullable=False, unique=True)
     password = db.Column(db.String(80), nullable=False)
 
+class StrongPassword:
+    def __init__(self, message=None):
+        if not message:
+            message = "Password must be strong: min. 8 characters, include uppercase, lowercase, digits, and symbols."
+        self.message = message
 
+    def __call__(self, form, field):
+        password = field.data
+        password_strength = zxcvbn.zxcvbn(password)
+        score = password_strength["score"]
+
+        if score < 3:
+            raise ValidationError(self.message)
 
 class RegisterForm(FlaskForm):
     username = StringField(validators=[
@@ -88,6 +102,15 @@ class RegisterForm(FlaskForm):
     password = PasswordField(validators=[
                              InputRequired(), Length(min=8, max=20)], render_kw={"placeholder": "Password"})
 
+    submit = SubmitField('Register')
+
+class RegisterForm(FlaskForm):
+    username = StringField(validators=[
+                           InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
+    password = PasswordField(validators=[
+                             InputRequired(), Length(min=8, max=20), StrongPassword()], render_kw={"placeholder": "Password"})
+    confirm_password = PasswordField(validators=[
+                             InputRequired(), EqualTo('password', message='Passwords must match.')], render_kw={"placeholder": "Confirm Password"})
     submit = SubmitField('Register')
 
     def validate_username(self, username):
@@ -125,7 +148,16 @@ def login():
 @login_required
 def dashboard():
     stored_passwords = StoredPassword.query.filter_by(user_id=current_user.id).all()
-    return render_template('dashboard.html', stored_passwords=stored_passwords)
+    decrypted_passwords = []
+    for sp in stored_passwords:
+        decrypted_passwords.append({
+            'id': sp.id,
+            'website': sp.get_website(),
+            'username': sp.get_username(),
+            'password': sp.get_password(),
+        })
+    return render_template('dashboard.html', stored_passwords=decrypted_passwords)
+
 
 
 

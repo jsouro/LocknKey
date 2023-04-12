@@ -18,6 +18,16 @@
             background-color: #f2f2f2;
         }
     </style>
+    <script>
+        function togglePasswordVisibility(id) {
+            var passwordField = document.getElementById(id);
+            if (passwordField.type === "password") {
+                passwordField.type = "text";
+            } else {
+                passwordField.type = "password";
+            }
+        }
+    </script>
 </head>
 <body>
     <h1>Welcome to your Dashboard</h1>
@@ -35,7 +45,10 @@
                 <tr>
                     <td>{{ stored_password.website }}</td>
                     <td>{{ stored_password.username }}</td>
-                    <td>{{ stored_password.password }}</td>
+                    <td>
+                        <input type="password" id="password_{{ stored_password.id }}" value="{{ stored_password.password }}" readonly>
+                        <button onclick="togglePasswordVisibility('password_{{ stored_password.id }}')">Show</button>
+                    </td>                    
                     <td>
                         <a href="{{ url_for('edit_password', password_id=stored_password.id) }}">Edit</a>
                         <form action="{{ url_for('delete_password', password_id=stored_password.id) }}" method="POST" style="display:inline;">
