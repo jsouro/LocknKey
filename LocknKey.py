@@ -17,9 +17,9 @@ from cryptography.fernet import Fernet
 # Create Flask app and configure it
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:jacob@localhost:3306/database'
-app.config['SECRET_KEY'] = 'thisisasecretkey'
-app.config['ENCRYPTION_KEY'] = 'ikfkZzSKk0qh3ypyF2ByhEd8RvZa6oDRynkAuCZuelQ='
+app.config['SQLALCHEMY_DATABASE_URI'] = 'ENTER_YOUR_DATABASE_URI'
+app.config['SECRET_KEY'] = 'YOUR_SECRET_KEY'                            #Note: Removed the keys after presentation to publicly upload this to my github
+app.config['ENCRYPTION_KEY'] = 'YOUR_ENCRYPTION_KEY'                    #Thank you!
 
 # Initialize database, bcrypt for password hashing, and login manager
 db = SQLAlchemy(app)
